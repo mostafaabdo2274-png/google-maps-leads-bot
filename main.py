@@ -32,4 +32,4 @@ app.add_handler(CommandHandler("search", search))
 
 print("🚀 Telegram Bot Started")
 
-app.run_polling()،
+app.run_polling()
