@@ -44,6 +44,7 @@ async def search(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     results = search_places(query)
+    print(results)
 
     if not results:
 
