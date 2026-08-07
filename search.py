@@ -1,6 +1,4 @@
-import requests
-
-from config import DEFAULT_RESULTS, USER_AGENT
+from duckduckgo_search import DDGS
 
 
 def search_places(query):
@@ -8,62 +6,50 @@ def search_places(query):
     parts = [x.strip() for x in query.split("|")]
 
     if len(parts) != 3:
-        return "❌ استخدم:\n/search النشاط | المدينة | الدولة"
+        return []
 
-    category, city, country = parts
+    category = parts[0]
+    city = parts[1]
+    country = parts[2]
 
-    search_query = f"{category} in {city}, {country}"
+    search = f"{category} {city} {country}"
 
-    url = "https://nominatim.openstreetmap.org/search"
-
-    params = {
-        "q": search_query,
-        "format": "jsonv2",
-        "limit": DEFAULT_RESULTS,
-        "addressdetails": 1
-    }
-
-    headers = {
-        "User-Agent": USER_AGENT
-    }
+    results = []
 
     try:
 
-        response = requests.get(
-            url,
-            params=params,
-            headers=headers,
-            timeout=20
-        )
+        with DDGS() as ddgs:
 
-        response.raise_for_status()
+            for r in ddgs.text(
+                search,
+                max_results=20
+            ):
 
-        data = response.json()
+                url = r.get("href") or r.get("url")
 
-        if not data:
-            return "❌ لم يتم العثور على نتائج."
+                if not url:
+                    continue
 
-        text = "📍 النتائج:\n\n"
+                results.append({
 
-        for i, item in enumerate(data, 1):
+                    "name": r.get("title", ""),
 
-            lat = item.get("lat", "")
-            lon = item.get("lon", "")
+                    "phone": "",
 
-            name = item.get("name")
-            if not name:
-                name = item.get("display_name", "").split(",")[0]
+                    "website": url,
 
-            address = item.get("display_name", "")
+                    "address": r.get("body", ""),
 
-            text += (
-                f"{i}. {name}\n"
-                f"📍 {address}\n"
-                f"🗺 https://www.google.com/maps?q={lat},{lon}\n\n"
-            )
+                    "lat": "",
 
-        return text
+                    "lon": "",
+
+                    "link": url
+
+                })
 
     except Exception as e:
+
         print(e)
-        return f"❌ حدث خطأ:\n{e}"
+
+    return results
