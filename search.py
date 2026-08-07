@@ -8,13 +8,11 @@ def search_places(query):
     parts = [x.strip() for x in query.split("|")]
 
     if len(parts) != 3:
-        return []
+        return "❌ استخدم:\n/search النشاط | المدينة | الدولة"
 
-    category = parts[0]
-    city = parts[1]
-    country = parts[2]
+    category, city, country = parts
 
-    search_query = f"{category}, {city}, {country}"
+    search_query = f"{category} in {city}, {country}"
 
     url = "https://nominatim.openstreetmap.org/search"
 
@@ -42,35 +40,30 @@ def search_places(query):
 
         data = response.json()
 
-        results = []
+        if not data:
+            return "❌ لم يتم العثور على نتائج."
 
-        for item in data:
+        text = "📍 النتائج:\n\n"
+
+        for i, item in enumerate(data, 1):
 
             lat = item.get("lat", "")
             lon = item.get("lon", "")
 
-            results.append({
+            name = item.get("name")
+            if not name:
+                name = item.get("display_name", "").split(",")[0]
 
-                "name": item.get("name") or item.get("display_name", "").split(",")[0],
+            address = item.get("display_name", "")
 
-                "phone": "",
+            text += (
+                f"{i}. {name}\n"
+                f"📍 {address}\n"
+                f"🗺 https://www.google.com/maps?q={lat},{lon}\n\n"
+            )
 
-                "website": "",
-
-                "address": item.get("display_name", ""),
-
-                "lat": lat,
-
-                "lon": lon,
-
-                "link": f"https://www.google.com/maps?q={lat},{lon}"
-
-            })
-
-        return results
+        return text
 
     except Exception as e:
-
         print(e)
-
-        return []
+        return f"❌ حدث خطأ:\n{e}"
