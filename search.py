@@ -2,7 +2,6 @@ from duckduckgo_search import DDGS
 
 
 def search_places(query):
-
     parts = [x.strip() for x in query.split("|")]
 
     if len(parts) != 3:
@@ -12,44 +11,46 @@ def search_places(query):
     city = parts[1]
     country = parts[2]
 
-    search = f"{category} {city} {country}"
+    searches = [
+        f'site:yellowpages.com "{category}" "{city}" "{country}"',
+        f'site:yellowpages.com.sa "{category}" "{city}"',
+        f'site:daleeli.com "{category}" "{city}"',
+        f'site:foursquare.com "{category}" "{city}"',
+        f'"{category}" "{city}" "{country}"'
+    ]
 
     results = []
+    added = set()
 
-    try:
+    with DDGS() as ddgs:
 
-        with DDGS() as ddgs:
+        for q in searches:
 
-            for r in ddgs.text(
-                search,
-                max_results=20
-            ):
+            try:
 
-                url = r.get("href") or r.get("url")
+                for r in ddgs.text(q, max_results=10):
 
-                if not url:
-                    continue
+                    url = r.get("href") or r.get("url")
 
-                results.append({
+                    if not url:
+                        continue
 
-                    "name": r.get("title", ""),
+                    if url in added:
+                        continue
 
-                    "phone": "",
+                    added.add(url)
 
-                    "website": url,
+                    results.append({
+                        "name": r.get("title", ""),
+                        "phone": "",
+                        "website": url,
+                        "address": r.get("body", ""),
+                        "lat": "",
+                        "lon": "",
+                        "link": url
+                    })
 
-                    "address": r.get("body", ""),
-
-                    "lat": "",
-
-                    "lon": "",
-
-                    "link": url
-
-                })
-
-    except Exception as e:
-
-        print(e)
+            except:
+                pass
 
     return results
