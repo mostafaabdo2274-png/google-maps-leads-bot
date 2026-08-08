@@ -1,7 +1,12 @@
-from duckduckgo_search import DDGS
+import requests
+from bs4 import BeautifulSoup
 
+HEADERS = {
+    "User-Agent": "Mozilla/5.0"
+}
 
 def search_places(query):
+
     parts = [x.strip() for x in query.split("|")]
 
     if len(parts) != 3:
@@ -11,46 +16,56 @@ def search_places(query):
     city = parts[1]
     country = parts[2]
 
-    searches = [
-        f'site:yellowpages.com "{category}" "{city}" "{country}"',
-        f'site:yellowpages.com.sa "{category}" "{city}"',
-        f'site:daleeli.com "{category}" "{city}"',
-        f'site:foursquare.com "{category}" "{city}"',
-        f'"{category}" "{city}" "{country}"'
-    ]
+    q = f"{category} {city} {country}"
+
+    url = f"https://www.yellowpages.com/search?search_terms={q}"
+
+    r = requests.get(url, headers=HEADERS, timeout=30)
+
+    soup = BeautifulSoup(r.text, "lxml")
 
     results = []
-    added = set()
 
-    with DDGS() as ddgs:
+    cards = soup.select(".result")
 
-        for q in searches:
+    for card in cards[:20]:
 
-            try:
+        try:
 
-                for r in ddgs.text(q, max_results=10):
+            name = card.select_one(".business-name").get_text(strip=True)
 
-                    url = r.get("href") or r.get("url")
+        except:
+            continue
 
-                    if not url:
-                        continue
+        phone = ""
 
-                    if url in added:
-                        continue
+        p = card.select_one(".phones")
 
-                    added.add(url)
+        if p:
+            phone = p.get_text(strip=True)
 
-                    results.append({
-                        "name": r.get("title", ""),
-                        "phone": "",
-                        "website": url,
-                        "address": r.get("body", ""),
-                        "lat": "",
-                        "lon": "",
-                        "link": url
-                    })
+        address = ""
 
-            except:
-                pass
+        a = card.select_one(".street-address")
+
+        if a:
+            address = a.get_text(" ", strip=True)
+
+        website = ""
+
+        w = card.select_one(".track-visit-website")
+
+        if w:
+            website = w.get("href", "")
+
+        results.append({
+            "name": name,
+            "phone": phone,
+            "website": website,
+            "address": address,
+            "lat": "",
+            "lon": "",
+            "link": website
+        })
 
     return results
