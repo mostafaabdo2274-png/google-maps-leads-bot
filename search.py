@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import quote
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0"
@@ -12,13 +13,11 @@ def search_places(query):
     if len(parts) != 3:
         return []
 
-    category = parts[0]
-    city = parts[1]
-    country = parts[2]
+    category, city, country = parts
 
-    q = f"{category} {city} {country}"
+    q = quote(f"{category} {city} {country}")
 
-    url = f"https://www.yellowpages.com/search?search_terms={q}"
+    url = f"https://html.duckduckgo.com/html/?q={q}"
 
     r = requests.get(url, headers=HEADERS, timeout=30)
 
@@ -26,46 +25,30 @@ def search_places(query):
 
     results = []
 
-    cards = soup.select(".result")
+    for item in soup.select(".result")[:20]:
 
-    for card in cards[:20]:
+        title = item.select_one(".result__title")
 
-        try:
+        link = item.select_one(".result__url")
 
-            name = card.select_one(".business-name").get_text(strip=True)
-
-        except:
-            continue
-
-        phone = ""
-
-        p = card.select_one(".phones")
-
-        if p:
-            phone = p.get_text(strip=True)
-
-        address = ""
-
-        a = card.select_one(".street-address")
-
-        if a:
-            address = a.get_text(" ", strip=True)
-
-        website = ""
-
-        w = card.select_one(".track-visit-website")
-
-        if w:
-            website = w.get("href", "")
+        snippet = item.select_one(".result__snippet")
 
         results.append({
-            "name": name,
-            "phone": phone,
-            "website": website,
-            "address": address,
+
+            "name": title.get_text(" ", strip=True) if title else "",
+
+            "phone": "",
+
+            "website": link.get_text(" ", strip=True) if link else "",
+
+            "address": snippet.get_text(" ", strip=True) if snippet else "",
+
             "lat": "",
+
             "lon": "",
-            "link": website
+
+            "link": "https://" + link.get_text(strip=True).replace(" ", "") if link else ""
+
         })
 
     return results
