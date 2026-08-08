@@ -2,4 +2,3 @@ python-telegram-bot==21.6
 requests
 beautifulsoup4
 lxml
-duckduckgo-search==8.1.1
